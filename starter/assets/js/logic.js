@@ -1,149 +1,172 @@
-var numberOfQuestions = listOfQuestions.length;
+var startScreenEl = document.querySelector("#start-screen");
+var endScreenEl = document.querySelector("#end-screen");
+var questionsEl = document.querySelector("#questions");
+var questionsTileEl = document.querySelector("#question-title");
+var choicesEl = document.querySelector("#choices");
+var timerEl = document.querySelector(".timer");
+var startButtonEl = document.querySelector("#start");
+var finalScoreEl = document.querySelector("#final-score");
+var initialsEl = document.querySelector("#initials");
+var endButtonEl = document.querySelector("#submit");
+
+var maxTimerCountReqd = 60;
+var timerCount;
+var runningScore = 0;
 var currentQuestion = 0;
-var pointsScored = 0;
-var pointsToAdd = 10;
+var initialsAndScores = [];
+var hr = document.createElement('hr');
+var div = document.createElement('div');
+var userInitials = '';
 
-// Variables to get DOM elements needed
-var questionTitle = document.querySelector("#question-title");
-var choices = document.querySelector("#choices");
-var startScreen = document.querySelector("#start-screen");
-var questions = document.querySelector("#questions");
-var endScreen = document.querySelector("#end-screen");
-var finalScore = document.querySelector("#final-score");
-var submitBtn = document.querySelector("#submit");
-var feedback = document.querySelector("#feedback");
 
-// * A start button that when clicked a timer starts and the first question appears.
-var startButton = document.querySelector("#start");
-var time = document.querySelector("#time");
-var timerStarted = false;
-var timeCountdown = 60;
-var timePenalty = 10;
-
-//===========//
-// FUNCTIONS //
-//===========//
-
-// Logic to "feed" questions into the right area
-function addQuestion(question) { // Add question text
-    questionTitle.textContent = question[0];
-
-    //CLear UL element (if there is one)
-    while (choices.hasChildNodes()) {
-        choices.removeChild(choices.firstChild);
-    }
-
-    // Add list structure with possible answers
-    var ulEl = document.createElement("ul");
-    var choicesArr = question[1];
-    var rightChoice = question[2];
-
-    for (var i = 0; i < choicesArr.length; i++) {
-        var liEl = document.createElement("li");
-        if (i === rightChoice) { // Right choice was selected
-            liEl.setAttribute("data-right-answer", true);
-        } else { // Wrong choice was selected
-            liEl.setAttribute("data-right-answer", false);
-        }
-        // * Questions contain buttons for each answer.
-        var btn = document.createElement("button");
-        btn.textContent = (i + 1) + ". " + choicesArr[i];
-        liEl.appendChild(btn);
-        ulEl.appendChild(liEl);
-        ulEl.add;
-        choices.appendChild(ulEl);
-    }
-    choices.add;
-}
-
-function endGame() { // * When the game ends, it should display their score and give the user the ability to save their initials and their score
-    // Set timer to 0
-    timeCountdown = 0;
-    time.textContent = timeCountdown + "s";
-    // Pass the points scored to the respective place on the page
-    finalScore.textContent = pointsScored;
-
-    // Hide questions and show end screen
-    questions.setAttribute("class", "hide");
-    endScreen.setAttribute("class", "start");
-
-}
-
-//===========//
-// LISTENERS //
-//===========//
-
-startButton.addEventListener("click", function (event) {
-    event.preventDefault();
-    // Add questions to the page
-    addQuestion(listOfQuestions[currentQuestion]);
-
-    // Hide start screen and show questions
-    startScreen.setAttribute("class", "hide");
-    questions.setAttribute("class", "show");
-
-    // Start the timer
-    if (! timerStarted) {
-        timerStarted = true;
-        var myTimer = setInterval(function () {
-            if (timeCountdown <= 0) { 
-                // * The quiz should end when the timer reaches 0
-                clearInterval(myTimer);
-                endGame();
-            } else {
-                timeCountdown--;
-            }
-            time.textContent = timeCountdown + "s";
-        }, 1000)
-    }
-});
-
-// * When answer is clicked, the next question appears
-// Put a listener for the questions area
-questions.addEventListener("click", function (event) {
-    var element = event.target;
-
-    // If the clicked item is a button
-    if (element.matches("button") === true) { 
+function getQuestion() {
+    questionsTileEl.textContent = questions[currentQuestion].question;
+    // Render a new button for each answer
+    for (var i = 0; i < questions[currentQuestion].answers.length; i++) {
+        var button = document.createElement("button");
         
-        if (element.parentElement.getAttribute("data-right-answer") === "true") { // Get the parent li element and check if data-right-answer is true
-            
-            pointsScored = pointsScored + pointsToAdd; // If is, add to the points scored
-            currentQuestion++; // Increment the number of questions answered
-
-            // Provide feedback to right answer
-            var audioRight = new Audio("./assets/sfx/correct.wav");
-            audioRight.play();
-            feedback.textContent = "Right!"
-            
-            if (currentQuestion === numberOfQuestions) { // * The quiz should end when all questions are answered.
-                endGame(); 
-            } else { // Add next question
-                addQuestion(listOfQuestions[currentQuestion]);
-            }
-        } else { 
-            // * If the answer clicked was incorrect then subtract time from the clock
-            timeCountdown = timeCountdown - timePenalty;
-
-            // Provide feedback to wrong answer
-            var audioWrong = new Audio("./assets/sfx/incorrect.wav");
-            audioWrong.play();
-            feedback.textContent = "Wrong!"
-        }
-        // Show feedback element
-        feedback.setAttribute("class", "feedback");
+        button.textContent = i+1+". "+questions[currentQuestion].answers[i];
+        button.setAttribute("id", "answer");
+        button.setAttribute("answer", i); 
+        button.addEventListener("click", choiceMade);          
+        choicesEl.appendChild(button);
     }
-})
+    return;
+}
 
-submitBtn.addEventListener("click", function() {
+function choiceMade(event) {
+    event.preventDefault();
+    var choices = event.target;
+    var correctSound = new Audio("./assets/sfx/correct.wav");
+    var wrongSound = new Audio("./assets/sfx/incorrect.wav");
 
-    // Create array to hold the score and retrieve any eventual scores already stored in the localStorage
-    var scoreArr = JSON.parse(localStorage.getItem('score')) || [];
+    currentQuestion++;
+    hr.setAttribute("class", "line show");
+    questionsEl.appendChild(hr);
+    div.setAttribute("class", "line show");
+    questionsEl.appendChild(div);
 
-    // Add the current score to the array
-    scoreArr.push(document.querySelector("#initials").value + " - " + pointsScored);
+    if (choices.getAttribute("answer") == questions[currentQuestion-1].rightAnswer) {
+        runningScore++;
+        correctSound.play();
+        div.textContent = "Correct";
+    } 
+    else {
+        wrongSound.play();
+        div.textContent = "Wrong";
+        timerCount = timerCount - 10;
+        if (timerCount < 0) {
+            timerCount = 0;
+        }
+    }
+    if(currentQuestion < questions.length) {
+       //wait just enough for the user to see the correct/wrong message
+        setTimeout(() => {
+            choicesEl.innerHTML = '';
+            hr.setAttribute("class", "line hide");
+            div.setAttribute("class", "line hide");
+            getQuestion();   
+        }, 500);
+    }
+    return;
+}
 
-    //Get values from page and add them to localStorage
-    localStorage.setItem("score", JSON.stringify(scoreArr));
+// The startQuiz function is called when the start button is clicked
+function startQuiz() {
+    timerCount = maxTimerCountReqd;
+    getQuestion();
+    questionsEl.setAttribute("class", "show");
+    startScreenEl.setAttribute("class", "hide"); 
+    getScores();
+    startTimer();
+    return;
+}
 
+// endQuiz function is called when the submit button is clicked
+function endQuiz(event) {
+    event.preventDefault();
+    var iAndS = {
+        initials: userInitials,
+        score: finalScoreEl.innerHTML
+    };
+
+    if (userInitials != '') {
+        initialsAndScores.push(iAndS);
+        console.log(initialsAndScores);
+        localStorage.setItem("initialsAndScores", JSON.stringify(initialsAndScores));
+    }
+    else {
+        return;
+    }
+    currentQuestion = 0;
+    runningScore = 0;
+    choicesEl.innerHTML = '';
+    hr.setAttribute("class", "line hide");
+    div.setAttribute("class", "line hide");
+    endScreenEl.setAttribute("class", "hide");
+    startScreenEl.setAttribute("class", "start");
+    return;
+}
+
+// The setTimer function starts and stops the timer and triggers the end screen
+function startTimer() {
+    // Sets timer
+    timer = setInterval(function() {
+        if(timerCount >0 ) {
+            timerCount--;
+        }
+        else {
+            timerCount = 0;
+        }
+
+      timerEl.textContent = "Time: "+timerCount;
+      // Tests if time has run out
+      if (timerCount <= 0 || currentQuestion === questions.length) {
+        // Clears interval
+        clearInterval(timer);
+        finalScoreEl.textContent = runningScore;
+        initialsEl.value = '';
+        questionsEl.setAttribute("class", "hide");
+        endScreenEl.setAttribute("class", "show");
+      }
+      return;
+    }, 1000);
+}
+
+function getScores() {
+    var storedScores = localStorage.getItem("initialsAndScores");
+
+    if (storedScores) {
+        initialsAndScores = JSON.parse(storedScores);
+    }
+    return;
+}
+// Attach event listener to start button to call startQuiz function on click
+startButtonEl.addEventListener("click", startQuiz);
+
+// Attach event listener to submit button to call endQuiz function on click
+endButtonEl.addEventListener("click", endQuiz);
+
+//the user input for initials is validated, they are only allowed lowercase & uppercase alphabet characters
+initialsEl.addEventListener("keydown", function(event) {
+    var alphaChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+    if (userInitials.length < initialsEl.getAttribute("max") && event.keyCode != 8) {
+        if(alphaChars.includes(event.key)) {
+            userInitials += event.key;
+        }
+        else {
+            event.preventDefault();
+        }
+    }
+    else if(event.keyCode === 13) {
+        event.preventDefault();
+    }
+    else if (event.keyCode === 8 && userInitials.length != 0){
+        userInitials = userInitials.slice(0, userInitials.length-1);
+    }  
+    else {
+        event.preventDefault();
+    }
+    return;
 });
